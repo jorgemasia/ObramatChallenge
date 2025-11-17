@@ -1,0 +1,10 @@
+package com.obramat.pedidos.domain.ports;
+
+import com.obramat.pedidos.domain.model.OrderDetail;
+import java.util.List;
+import java.util.Optional;
+
+public interface OrderDetailRepository {
+    List<OrderDetail> findByOrderId(Long orderId);
+    void save(OrderDetail orderDetail);
+}

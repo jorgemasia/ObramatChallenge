@@ -1,0 +1,33 @@
+package com.obramat.pedidos.infrastructure.repository;
+
+import com.obramat.pedidos.domain.model.OrderDetail;
+import com.obramat.pedidos.domain.ports.OrderDetailRepository;
+import com.obramat.pedidos.infrastructure.entity.OrderDetailEntity;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+
+@Repository
+public class JpaOrderDetailRepository implements OrderDetailRepository {
+private final OrderDetailJpa jpa;
+public JpaOrderDetailRepository(OrderDetailJpa jpa){ this.jpa = jpa; }
+
+
+@Override
+public List<OrderDetail> findByOrderId(Long orderId){
+return jpa.findByOrderId(orderId).stream()
+.map(e -> new OrderDetail(e.getId(), new com.obramat.pedidos.domain.model.Product(e.getProduct().getId(), e.getProduct().getName(), e.getProduct().getPrice()), e.getQuantity()))
+.collect(Collectors.toList());
+}
+
+
+@Override
+public void save(OrderDetail orderDetail){
+OrderDetailEntity entity = new OrderDetailEntity();
+// Mapeo simplificado, necesitarías inyectar referencias a OrderEntity y ProductEntity reales
+entity.setQuantity(orderDetail.getQuantity());
+jpa.save(entity);
+}
+}
