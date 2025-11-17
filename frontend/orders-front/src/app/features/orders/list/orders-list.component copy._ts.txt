@@ -1,0 +1,92 @@
+import { Component, OnInit } from '@angular/core';
+import { HttpService } from '../../../core/services/http.service';
+import { OrdersService } from '../../../core/services/orders.service';
+import { Order } from '../../../core/models/order.model';
+import { Observable } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { RouterModule } from '@angular/router';
+import { map } from 'rxjs/operators';
+import { MatTableDataSource } from '@angular/material/table';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule } from '@angular/material/paginator';
+
+
+orders$: Observable<Order[]>;
+@Component({
+  selector: 'app-orders-list',
+  standalone : true,
+  templateUrl: './orders-list.component.html',
+  styleUrls: ['./orders-list.component.scss'],
+  imports: [
+    CommonModule,
+    MatTableModule,
+    MatButtonModule,
+    RouterModule,
+    ReactiveFormsModule,
+    MatSelectModule,
+    MatInputModule,
+    MatPaginatorModule    
+  ]  
+})
+export class OrdersListComponent implements OnInit {
+  orders$: Observable<Order[]>;
+  displayedColumns: string[] = ['id','createdAt','productCount','totalWithoutTax','totalWithTax','status','actions'];
+
+  // Filters
+  statusFilter = new FormControl('');
+  priceFilter = new FormControl('');
+  dateFilter = new FormControl('');
+  originalOrders: Order[] = []; 
+
+  constructor(private http: HttpService) {
+    this.orders$ = new Observable<Order[]>;
+  }
+
+  ngOnInit(): void {
+    console.log('Loading list');
+    this.loadOrders();
+  }
+
+  loadOrders(): void {
+    this.orders$ = this.http.get<Order[]>('orders').pipe(map(orders => orders || []));
+  }
+
+  deleteOrder(id: number): void {
+    if (confirm('Are you sure you want to delete this order?')) {
+      this.http.delete(`orders/${id}`).subscribe(() => this.loadOrders());
+    }
+  }
+  setupFilters() {
+    this.statusFilter.valueChanges.subscribe(() => this.applyFilters());
+    this.priceFilter.valueChanges.subscribe(() => this.applyFilters());
+    this.dateFilter.valueChanges.subscribe(() => this.applyFilters());
+  }
+
+  applyFilters() {
+    let filtered = [...this.originalOrders];
+
+    const status = this.statusFilter.value?.trim().toLowerCase();
+    const price = Number(this.priceFilter.value);
+    const date = this.dateFilter.value;
+
+    if (status) {
+      filtered = filtered.filter(o => o.status.toLowerCase().includes(status));
+    }
+
+    if (!isNaN(price) && price > 0) {
+      filtered = filtered.filter(o => o.totalWithTax >= price);
+    }
+
+    if (date) {
+      filtered = filtered.filter(o =>
+        new Date(o.createdAt).toISOString().slice(0, 10) === date
+      );
+    }
+
+    this.dataSource.data = filtered;
+  }  
+}

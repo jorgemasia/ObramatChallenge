@@ -1,0 +1,112 @@
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormArray, FormGroup, Validators } from '@angular/forms';
+import { Product } from '../../../core/models/order.model';
+import { HttpService } from '../../../core/services/http.service';
+import { ActivatedRoute, Router } from '@angular/router';
+
+@Component({
+  selector: 'app-order-form',
+  templateUrl: './order-form.component.html',
+  styleUrls: ['./order-form.component.scss'],
+  standalone : true
+})
+export class OrderFormComponent implements OnInit {
+  form: FormGroup;
+  orderId: string | null;
+
+  constructor(
+    private fb: FormBuilder,
+    private http: HttpService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.orderId = this.route.snapshot.paramMap.get('id');
+    this.form = this.fb.group({
+      products: this.fb.array([])
+    });
+
+    if (this.orderId) {
+      this.http.get(`orders/${this.orderId}`).subscribe((order: any) => {
+        order.products.forEach((p: Product) => this.addProduct(p));
+      });
+    }
+  }
+
+  get products() {
+    return this.form.get('products') as FormArray;
+  }
+
+  addProduct(product?: Product) {
+    this.products.push(this.fb.group({
+      name: [product?.name || '', Validators.required],
+      quantity: [product?.quantity || 1, Validators.required],
+      price: [product?.price || 0, Validators.required]
+    }));
+  }
+
+  removeProduct(index: number) {
+    this.products.removeAt(index);
+  }
+
+  save() {
+    const obs = this.orderId
+      ? this.http.put(`orders/${this.orderId}`, this.form.value)
+      : this.http.post('orders', this.form.value);
+
+    obs.subscribe(() => this.router.navigate(['/orders']));
+  }
+
+  getTotal() {
+    return this.products.value.reduce((acc: number, p: Product) => acc + p.price * p.quantity, 0);
+  }
+}
+
+
+// import { Component, OnInit } from '@angular/core';
+// import { CommonModule } from '@angular/common';
+// import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+// import { OrdersService } from '../orders.service';
+// import { ActivatedRoute, Router } from '@angular/router';
+
+// @Component({
+//   standalone: true,
+//   selector: 'app-order-form',
+//   imports: [CommonModule, ReactiveFormsModule],
+//   templateUrl: './order-form.component.html'
+// })
+// export class OrderFormComponent implements OnInit {
+//   id: string | null = null;
+
+//   form = this.fb.group({
+//     products: this.fb.array([])
+//   });
+
+//   constructor(
+//     private fb: FormBuilder,
+//     private srv: OrdersService,
+//     private route: ActivatedRoute,
+//     private router: Router
+//   ) {}
+
+//   ngOnInit() {
+//     this.id = this.route.snapshot.paramMap.get('id');
+
+//     if (this.id) {
+//       this.srv.get(this.id).subscribe(o => {
+//         // rellenar form
+//       });
+//     }
+//   }
+
+//   save() {
+//     const dto = this.form.value;
+
+//     if (!this.id) {
+//       this.srv.create(dto).subscribe(() => this.router.navigate(['/orders']));
+//     } else {
+//       this.srv.update(this.id, dto).subscribe(() => this.router.navigate(['/orders']));
+//     }
+//   }
+// }
